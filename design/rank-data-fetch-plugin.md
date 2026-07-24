@@ -189,8 +189,13 @@ override from a small JSON settings file if present. This is cheap to add
 and avoids a rebuild if the server ever moves or a dev build needs to point
 elsewhere.
 
-- Store it at `%AppData%\HearthstoneDeckTracker\Plugins\MyPlugin\settings.json`,
-  e.g. `{ "apiUrl": "https://...", "apiKey": "..." }` (see
+- Store it next to the plugin DLL, e.g.
+  `%AppData%\HearthstoneDeckTracker\Plugins\MyPlugin.settings.json` — HDT's
+  `Plugins` folder is flat (every plugin's DLL sits directly in it, no
+  per-plugin subfolder), so name the file after the plugin/assembly rather
+  than a generic `settings.json` to avoid colliding with another installed
+  plugin's own settings file. Contents e.g.
+  `{ "apiUrl": "https://...", "apiKey": "..." }` (see
   [Authentication and payload delivery](#authentication-and-payload-delivery)
   for the `apiKey` field).
 - Read it in `OnLoad()`; fall back to the hardcoded default if the file is
@@ -321,8 +326,10 @@ acceptable (the user can see it happened via the log, and it's a low-stakes
 personal stats tool), stop here. If not, add a small local retry queue:
 
 - On send failure, append the JSON payload (plus an attempt count and first-
-  attempt timestamp) as one line to a local file, e.g.
-  `%AppData%\HearthstoneDeckTracker\Plugins\MyPlugin\pending-uploads.jsonl`.
+  attempt timestamp) as one line to a local file next to the DLL, e.g.
+  `%AppData%\HearthstoneDeckTracker\Plugins\MyPlugin.pending-uploads.jsonl`
+  (named after the plugin, same reasoning as the settings file above — the
+  `Plugins` folder is flat).
 - On `OnLoad()` (and optionally every few minutes from `OnUpdate()`), read
   the file, retry each entry, and rewrite the file with only the entries
   that still failed.
@@ -372,12 +379,16 @@ call, not a bug earlier in the polling logic).
   these in-process; shipping a second copy into the Plugins folder risks a
   stale or mismatched-version assembly being loaded side-by-side, which can
   produce confusing type-identity mismatches even when everything compiles.
-- **Output location**: HDT auto-loads every assembly under
+- **Output location**: HDT auto-loads every assembly directly under
   `%AppData%\HearthstoneDeckTracker\Plugins`
-  (`Plugins/PluginManager.cs:165-175`, `LoadPluginsFromDefaultPath`). A
-  post-build step that copies the compiled DLL straight into
-  `...\Plugins\MyPlugin\` saves a manual copy on every rebuild during
-  development.
+  (`Plugins/PluginManager.cs:165-175`, `LoadPluginsFromDefaultPath`) — the
+  folder is flat, with every plugin's DLL sitting straight in it rather than
+  in a per-plugin subfolder (confirmed against a real install: an existing
+  `d0nkey.top plugin.dll` sits directly there). A post-build step that
+  copies the compiled DLL straight into `...\Plugins\` saves a manual copy
+  on every rebuild during development, though this repo's own plugin project
+  deliberately leaves that as a manual step instead (see
+  [how-to-build.md](how-to-build.md)).
 
 ## Source references (HDT `Hearthstone-Deck-Tracker-master`)
 

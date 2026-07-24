@@ -17,8 +17,15 @@ namespace RankTrackerPlugin
 		{
 			get
 			{
+				// Real HDT plugin installs are flat - HDT's Plugins folder holds every
+				// plugin's DLL directly (confirmed: an installed "d0nkey.top plugin.dll"
+				// sits straight in %AppData%\HearthstoneDeckTracker\Plugins\, no
+				// per-plugin subfolder). A generic "settings.json" next to the DLL
+				// would collide with any other flatly-installed plugin's own settings
+				// file, so this is named after the assembly instead.
 				var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
-				return Path.Combine(dir, "settings.json");
+				var assemblyName = Assembly.GetExecutingAssembly().GetName().Name;
+				return Path.Combine(dir, $"{assemblyName}.settings.json");
 			}
 		}
 

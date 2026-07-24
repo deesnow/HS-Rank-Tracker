@@ -33,7 +33,7 @@ namespace RankTrackerPlugin
 		public string ButtonText => "Reload settings";
 		public string Author => "you";
 		public Version Version => new Version(1, 0, 0);
-		public MenuItem MenuItem => null;
+		public MenuItem MenuItem => null!;
 
 		public void OnLoad()
 		{

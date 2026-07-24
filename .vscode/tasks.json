@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build plugin",
+            "type": "shell",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/plugin/RankTrackerPlugin.csproj",
+                // Points at the installed HDT app folder so the plugin can
+                // reference HearthstoneDeckTracker.exe / Newtonsoft.Json.dll.
+                // HDT auto-updates into a new "app-<version>" folder, so bump
+                // this after an update if the build starts failing to resolve
+                // the reference.
+                "-p:HdtBinDir=C:\\Users\\JanosTarjanyi\\AppData\\Local\\HearthstoneDeckTracker\\app-1.53.14",
+                "-p:HdtLibDir=C:\\Users\\JanosTarjanyi\\AppData\\Local\\HearthstoneDeckTracker\\app-1.53.14"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
