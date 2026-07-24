@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>RankTrackerPlugin</AssemblyName>
+    <RootNamespace>RankTrackerPlugin</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <LangVersion>10</LangVersion>
+    <Nullable>enable</Nullable>
+
+    <!--
+      Point these at a built copy of HDT (this repo's checkout, once built) or at a
+      real HDT installation. Override on the command line if the defaults don't
+      match your setup, e.g.:
+        dotnet build -p:HdtBinDir="C:\Path\To\Hearthstone Deck Tracker" -p:HdtLibDir="C:\Path\To\lib"
+    -->
+    <HdtBinDir Condition="'$(HdtBinDir)' == ''">..\..\HDT\Hearthstone-Deck-Tracker-master\Hearthstone Deck Tracker\bin\x64\Debug</HdtBinDir>
+    <HdtLibDir Condition="'$(HdtLibDir)' == ''">..\..\HDT\Hearthstone-Deck-Tracker-master\lib</HdtLibDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Not copied: HDT already loads its own copies of these in-process. -->
+    <Reference Include="HearthstoneDeckTracker">
+      <HintPath>$(HdtBinDir)\HearthstoneDeckTracker.exe</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(HdtLibDir)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+</Project>

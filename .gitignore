@@ -1,1 +1,8 @@
 HDT/*
+
+# backend
+src/backend/*
+
+# plugin build output
+src/plugin/bin/
+src/plugin/obj/
