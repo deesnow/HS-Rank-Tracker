@@ -20,24 +20,22 @@ the design.
    ```
 
    This folder is flat — no per-plugin subfolder needed.
-3. Restart HDT.
-4. Enable the plugin: **Options → Tracker → Plugins**, find
+3. Get your own API key: send the `/hdttoken` command to the Jeeves bot.
+   You'll receive your API key as a DM.
+4. Put your own API key into `RankTrackerPlugin.settings.json` (the copy in
+   the Roaming `Plugins` folder from step 2) and save it — set `ApiKey` to
+   the value from Jeeves.
+5. Restart HDT.
+6. Enable the plugin: **Options → Tracker → Plugins**, find
    **RankTrackerPlugin** and switch it on. New plugins start disabled, and
-   nothing runs (no settings file is created) until you do this.
-5. Set your API key. After enabling once, HDT creates a settings file next
-   to where it actually runs the plugin from:
-
-   ```text
-   %LocalAppData%\HearthstoneDeckTracker\app-<version>\Plugins\RankTrackerPlugin.settings.json
-   ```
-
-   Edit `ApiKey` (and `ApiUrl` if not using the default), then either
-   restart HDT or click the plugin's "Reload settings" button under
-   Options → Tracker → Plugins.
+   nothing runs until you do this.
 
 Without an `ApiKey` configured, the plugin logs a warning and skips
 uploading rather than sending an unauthenticated request.
 
-**Note:** when HDT auto-updates to a new `app-<version>` folder, re-copy the
-DLL into the Roaming `Plugins` folder and re-enter your API key — the
-settings file doesn't carry over automatically.
+**Note:** once enabled, HDT syncs its settings file into
+`%LocalAppData%\HearthstoneDeckTracker\app-<version>\Plugins\RankTrackerPlugin.settings.json`
+and actually runs from there. When HDT auto-updates to a new `app-<version>`
+folder, re-copy the DLL and settings JSON into the Roaming `Plugins` folder
+and re-enter your API key — the settings file doesn't carry over
+automatically.
