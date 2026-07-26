@@ -72,6 +72,7 @@ namespace RankTrackerPlugin
 			// the time the next game starts.
 			_pendingGame = gs;
 			_pendingSince = DateTime.UtcNow;
+			Log.Info($"{Name}: ranked match ended (gameId={gs.GameId}), waiting up to {PollTimeout.TotalSeconds:0}s for post-match rank...");
 		}
 
 		// Called by HDT roughly every 100ms (Plugins/PluginManager.cs:266-276).
@@ -101,6 +102,8 @@ namespace RankTrackerPlugin
 			if(haveAfterData || timedOut)
 			{
 				_pendingGame = null;
+				if(timedOut && !haveAfterData)
+					Log.Warn($"{Name}: timed out waiting for post-match rank for game {gs.GameId}, uploading with whatever rank data is available.");
 				SendToServer(gs);
 			}
 		}
@@ -129,19 +132,24 @@ namespace RankTrackerPlugin
 				rankAfter = new { gs.StarLevelAfter, gs.StarsAfter, gs.LegendRankAfter },
 			};
 
+			var json = JsonConvert.SerializeObject(payload);
 			var request = new HttpRequestMessage(HttpMethod.Post, _settings.ApiUrl)
 			{
-				Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json")
+				Content = new StringContent(json, Encoding.UTF8, "application/json")
 			};
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
+
+			Log.Info($"{Name}: preparing to upload game {gs.GameId} to {_settings.ApiUrl}");
+			Log.Info($"{Name}: payload for {gs.GameId}: {json}");
 
 			try
 			{
 				var response = await Http.SendAsync(request);
+				var body = await response.Content.ReadAsStringAsync();
 				if(!response.IsSuccessStatusCode)
-					Log.Warn($"{Name}: upload failed for game {gs.GameId}: {(int)response.StatusCode} {response.StatusCode}");
+					Log.Warn($"{Name}: upload failed for game {gs.GameId}: {(int)response.StatusCode} {response.StatusCode}|{body}");
 				else
-					Log.Info($"{Name}: uploaded game {gs.GameId}.");
+					Log.Info($"{Name}: upload OK for game {gs.GameId}: {(int)response.StatusCode} {response.StatusCode}|{body}");
 			}
 			catch(Exception ex)
 			{

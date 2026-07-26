@@ -60,6 +60,38 @@ to point at them:
   Tracker/bin/x64/Debug` (with `lib/` alongside it, one level up). No `-p:`
   overrides are needed in that case.
 
+## Troubleshooting
+
+**"I enabled/copied the plugin but there's no settings file / it's not
+uploading."** Check `hdt_log.txt` first —
+`%AppData%\HearthstoneDeckTracker\Logs\hdt_log.txt` (confirmed present on a
+real install; rotated copies sit alongside it as `hdt_log_<timestamp>.txt`).
+grep it for the plugin's name. Two things commonly explain "nothing
+happened":
+
+- **New plugins start disabled.** HDT discovers a plugin (adds it to its
+  in-memory list) independently of enabling it — a freshly-added
+  `PluginWrapper` defaults `IsEnabled`/`_loaded` to `false`
+  (`Plugins/PluginWrapper.cs:18-36`), and `IPlugin.OnLoad()` only runs from
+  inside the `IsEnabled` setter (`Plugins/PluginWrapper.cs:58-84`). That
+  setter only fires from a pre-existing `plugins.xml` entry
+  (`Plugins/PluginManager.cs:280-304`) or you manually flipping the toggle
+  in **Options → Tracker → Plugins**. So the first time a plugin appears,
+  it stays off until you switch it on by hand — expect no "loaded" log line
+  and no settings file until then.
+- **The settings file isn't where you installed the DLL.**
+  `%AppData%\HearthstoneDeckTracker\Plugins\` (Roaming) is only a staging
+  folder you copy builds into. HDT's `PluginManager` constructor syncs
+  anything newer from there into its own current install folder,
+  `%LocalAppData%\HearthstoneDeckTracker\app-<version>\Plugins\`
+  (`Plugins/PluginManager.cs:24-43`), and actually loads/runs the plugin
+  from that copy. Since the plugin writes its settings file next to
+  `Assembly.GetExecutingAssembly().Location`, look for
+  `RankTrackerPlugin.settings.json` there, not under `%AppData%\Roaming\...`.
+  This also means the settings file doesn't carry over when HDT auto-updates
+  into a new `app-<version>` folder — the DLL gets re-synced, but runtime
+  state left behind in the old folder doesn't move with it.
+
 ## Source references
 
 - [rank-data-fetch-plugin.md](rank-data-fetch-plugin.md) — "Plugin project
