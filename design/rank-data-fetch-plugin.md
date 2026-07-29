@@ -241,6 +241,20 @@ up into HDT itself:
 ```csharp
 private static readonly HttpClient _http = new HttpClient();
 
+// HDT's Region enum uses "ASIA" for Hearthstone's Asia-Pacific realm (there's
+// no separate "AP" value on their side) - remap to the EU/US/AP labels our
+// backend expects. UNKNOWN/CHINA fall through to ToString() rather than being
+// silently dropped; UNKNOWN can happen if the region lookup hasn't completed
+// yet (see the Region tracking section), and CHINA is a distinct client this
+// tracker isn't expected to see.
+private static string RegionLabel(Region region) => region switch
+{
+    Region.US => "US",
+    Region.EU => "EU",
+    Region.ASIA => "AP",
+    _ => region.ToString(),
+};
+
 private async Task SendToServer(GameStats gs, PluginSettings settings)
 {
     var payload = new
@@ -253,6 +267,7 @@ private async Task SendToServer(GameStats gs, PluginSettings settings)
         format = gs.Format.ToString(),
         result = gs.Result.ToString(),
         wasConceded = gs.WasConceded,
+        region = RegionLabel(gs.Region),
         playerBattleTag = gs.PlayerName,
         opponentBattleTag = gs.OpponentName,
         rank = new { gs.LeagueId, gs.Rank, gs.StarLevel, gs.Stars, gs.LegendRank },
@@ -293,6 +308,39 @@ against the token-to-account mapping.
 (`Stats/GameStats.cs:173`) but which wasn't in the original payload sketch —
 worth keeping since a concede is a normal, common way a ranked match ends and
 callers may want to distinguish it from a natural win/loss.
+
+`region` surfaces `gs.Region` (`Stats/GameStats.cs:315`) — needed since
+players can queue from the EU, US, or AP realm and rank is realm-scoped, not
+account-wide. No extra work is required to get it: HDT already determines the
+region once per Hearthstone session and stamps it onto every `GameStats` it
+creates.
+
+- **Detection**: `Helper.GetCurrentRegion()` (`Utility/Helper.cs:342-356`)
+  calls `HearthMirror.Reflection.Client.GetAccountId()` and extracts the
+  region as a byte embedded in the account ID's high 64 bits
+  (`GetRegion(ulong accountHi) => (Region)((accountHi >> 32) & 0xFF)`,
+  `Utility/Helper.cs:358`). This is **HDT's own internal HearthMirror call** —
+  the plugin never touches `HearthMirror.dll` itself, keeping this consistent
+  with Option A.
+- **Session lifetime**: `Core.cs:410` sets `Game.CurrentRegion` once when
+  Hearthstone launches and resets it to `Region.UNKNOWN` when Hearthstone
+  exits (`Core.cs:497-498`). It's exposed on the public plugin API as
+  `Core.Game.CurrentRegion` (`IGame.CurrentRegion`, `Hearthstone/IGame.cs:38`).
+- **Per-match snapshot**: every new `GameStats` instance is created with
+  `Region = CurrentRegion` (`Hearthstone/GameV2.cs:476`), so the captured `gs`
+  reference already carries the region that was active when the match
+  started — no separate poll needed alongside the rank-after poll.
+- **Enum values**: `Region.UNKNOWN = 0`, `US = 1`, `EU = 2`, `ASIA = 3`,
+  `CHINA = 5` (`Enums/Region.cs`). HDT's `ASIA` is Hearthstone's Asia-Pacific
+  realm — there's no separate "AP" value on HDT's side, hence the
+  `RegionLabel` remap in the sketch above so the payload matches our backend's
+  `EU`/`US`/`AP` vocabulary. `CHINA` is the separate Chinese client/publisher,
+  not part of AP, and isn't expected to show up for this tracker's users.
+- **Caveat**: if a match somehow starts before the region lookup finishes
+  (e.g. HDT was still retrying `GetCurrentRegion`'s 10×2s poll when the
+  session's first game began), `gs.Region` will be `UNKNOWN` and `RegionLabel`
+  passes that through as the literal string `"UNKNOWN"` rather than dropping
+  the field — treat that as "region not yet known" server-side, not an error.
 
 `schemaVersion` is a plain integer bumped whenever a field is added, renamed,
 or removed. Costs nothing now and lets the backend branch on payload shape
@@ -400,6 +448,14 @@ call, not a bug earlier in the polling logic).
 - `Hearthstone Deck Tracker/Stats/GameStats.cs:43,76` — `GameId` (`Guid.NewGuid()`)
 - `Hearthstone Deck Tracker/Stats/GameStats.cs:173` — `WasConceded`
 - `Hearthstone Deck Tracker/Stats/GameStats.cs:175-218` — rank field definitions
+- `Hearthstone Deck Tracker/Stats/GameStats.cs:315` — `Region` property
+- `Hearthstone Deck Tracker/Enums/Region.cs` — `Region` enum values (`US`/`EU`/`ASIA`/`CHINA`/`UNKNOWN`)
+- `Hearthstone Deck Tracker/Utility/Helper.cs:342-356` — `GetCurrentRegion()`
+- `Hearthstone Deck Tracker/Utility/Helper.cs:358` — `GetRegion(ulong accountHi)`
+- `Hearthstone Deck Tracker/Core.cs:410` — `Game.CurrentRegion` set on Hearthstone launch
+- `Hearthstone Deck Tracker/Core.cs:497-498` — `Game.CurrentRegion` reset to `UNKNOWN` on Hearthstone exit
+- `Hearthstone Deck Tracker/Hearthstone/IGame.cs:38` — `CurrentRegion` (public plugin API)
+- `Hearthstone Deck Tracker/Hearthstone/GameV2.cs:476` — `Region` stamped onto new `GameStats`
 - `Hearthstone Deck Tracker/Enums/GameMode.cs` — `GameMode` enum values
 - `Hearthstone Deck Tracker/Config.cs:313` — `DiscardZeroTurnGame` default (`false`)
 - `Hearthstone Deck Tracker/API/ActionList.cs` — plugin action dispatch, `MaxPluginExecutionTime`

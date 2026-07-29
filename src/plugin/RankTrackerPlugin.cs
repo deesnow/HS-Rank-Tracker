@@ -46,6 +46,21 @@ namespace RankTrackerPlugin
 
 		public void OnUnload() => _pendingGame = null;
 
+		// HDT's Region enum uses "ASIA" for Hearthstone's Asia-Pacific realm
+		// (there's no separate "AP" value on their side) - remap to the
+		// EU/US/AP labels the backend expects. UNKNOWN/CHINA fall through to
+		// ToString() rather than being silently dropped; UNKNOWN can happen if
+		// HDT's region lookup (Core.cs:410, Helper.GetCurrentRegion) hasn't
+		// completed yet, and CHINA is a distinct client this tracker isn't
+		// expected to see.
+		private static string RegionLabel(Region region) => region switch
+		{
+			Region.US => "US",
+			Region.EU => "EU",
+			Region.ASIA => "AP",
+			_ => region.ToString(),
+		};
+
 		// Lets the user reload settings.json (e.g. after pasting in an API key)
 		// without restarting HDT. There's no built-in settings panel for
 		// plugin-specific fields, so this is the simplest available hook.
@@ -126,6 +141,7 @@ namespace RankTrackerPlugin
 				format = gs.Format.ToString(),
 				result = gs.Result.ToString(),
 				wasConceded = gs.WasConceded,
+				region = RegionLabel(gs.Region),
 				playerBattleTag = gs.PlayerName,
 				opponentBattleTag = gs.OpponentName,
 				rank = new { gs.LeagueId, gs.Rank, gs.StarLevel, gs.Stars, gs.LegendRank },
